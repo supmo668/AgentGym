@@ -4,14 +4,76 @@ Welcome to AgentGym! This guide will help you get started with contributing to t
 
 ## Table of Contents
 
-1. [Getting Started](#getting-started)
-2. [Development Environment Setup](#development-environment-setup)
-3. [Architecture Overview](#architecture-overview)
-4. [Creating a New Environment](#creating-a-new-environment)
-5. [Code Standards and Conventions](#code-standards-and-conventions)
-6. [Testing Guidelines](#testing-guidelines)
-7. [Contribution Workflow](#contribution-workflow)
-8. [Resources](#resources)
+1. [Quick Start (5 Minutes)](#quick-start-5-minutes)
+2. [Getting Started](#getting-started)
+3. [Development Environment Setup](#development-environment-setup)
+4. [Architecture Overview](#architecture-overview)
+5. [Creating a New Environment](#creating-a-new-environment)
+6. [Code Standards and Conventions](#code-standards-and-conventions)
+7. [Testing Guidelines](#testing-guidelines)
+8. [Contribution Workflow](#contribution-workflow)
+9. [Resources](#resources)
+
+## Quick Start (5 Minutes)
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone --recursive https://github.com/WooooDyy/AgentGym
+cd AgentGym
+
+# 2. Install core package
+cd agentenv
+pip install -e .
+cd ..
+
+# 3. (Optional) Install a specific environment
+cd agentenv-mcp  # Example: MCP environment
+pip install -e .
+cd ..
+```
+
+### Try the MCP Environment
+
+The MCP (Model Context Protocol) environment is a great example to get started:
+
+```bash
+# Terminal 1: Start MCP server
+mcp --host 127.0.0.1 --port 8000
+
+# Terminal 2: Run example
+cd agentenv-mcp
+python example_usage.py
+```
+
+Or use in code:
+
+```python
+from agentenv.envs.mcp import MCPEnvClient
+
+client = MCPEnvClient(
+    env_server_base="http://127.0.0.1:8000",
+    data_len=10
+)
+response = client.reset(data_idx=0)
+result = client.step("Action: list_collections with Action Input: {}")
+client.close()
+```
+
+### Key Concepts
+
+- **Environment**: Core logic (inherits `gym.Env`)
+- **Server**: FastAPI wrapper exposing HTTP endpoints
+- **Client**: Agent-side interface for HTTP communication
+- **Task**: Binds client to task configuration
+
+### Common Tasks
+
+- **Add New Environment**: Copy template from `agentenv-mcp/` or `agentenv-textcraft/`
+- **Run Tests**: `pytest agentenv-mcp/tests/`
+- **Format Code**: `black agentenv-yourenv/`
+- **Check Style**: `flake8 agentenv-yourenv/`
 
 ## Getting Started
 

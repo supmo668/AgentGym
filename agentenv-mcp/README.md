@@ -96,6 +96,49 @@ The server will start on the specified host and port. You can verify it's runnin
 - `http://localhost:8000/health` - Health status endpoint
 - `http://localhost:8000/docs` - Interactive API documentation (Swagger UI)
 
+### MCP Protocol Support
+
+The server supports both REST and SSE (Server-Sent Events) transports as per the Model Context Protocol specification.
+
+#### Using with mcp.json
+
+Configure the MCP server in your `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "agentgym-mcp": {
+      "command": "python",
+      "args": [
+        "-m",
+        "agentenv_mcp.mcp_launch",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "env": {},
+      "transport": "sse"
+    }
+  }
+}
+```
+
+#### SSE Endpoints
+
+- `GET /sse` - Server-Sent Events endpoint for real-time streaming
+- `POST /sse/message` - Send JSON-RPC messages via SSE transport
+
+Example SSE message:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "create",
+  "params": {"id": 0}
+}
+```
+
 ### Using with AgentGym
 
 #### Client Setup
@@ -391,6 +434,136 @@ Tools: get_collection_info → search_collection → format_response → finish
 ```
 Goal: Use a prompt template for a task
 Tools: get_prompt → search_collection → finish
+```
+
+## Architecture
+
+### Overview
+
+The MCP environment demonstrates how to integrate complex tool-based systems into AgentGym. It simulates a Model Context Protocol server with Milvus vector database collections.
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         LLM Agent                               │
+│  - Generates thoughts and actions                               │
+│  - Uses ReAct format                                            │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ Natural Language Actions
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              MCPEnvClient (agentenv/envs/mcp.py)                │
+│  - Manages HTTP communication with server                       │
+│  - Maintains conversation history                               │
+│  - Caches state locally                                         │
+│  - Implements BaseEnvClient interface                           │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ HTTP POST/GET
+                         │ JSON payloads
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│           FastAPI Server (mcp_server.py)                        │
+│  Endpoints:                                                     │
+│  - POST /create      → Create environment                       │
+│  - POST /step        → Execute action                           │
+│  - POST /reset       → Reset to initial state                   │
+│  - GET  /observation → Get current state                        │
+│  - POST /close       → Cleanup environment                      │
+│  - GET  /health      → Server health check                      │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ Validated Requests
+                         │ (Pydantic models)
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│         MCPEnvServer (mcp_server_wrapper.py)                    │
+│  - Manages multiple environment instances                       │
+│  - Thread-safe ID allocation                                    │
+│  - Environment lifecycle management                             │
+│  - Task dataset management                                      │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ Method Calls
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              MCPEnv (mcp_environment.py)                        │
+│  Core Environment (inherits gym.Env)                            │
+│  - step(action)    → Execute action and return obs/reward/done │
+│  - reset(idx)      → Initialize to task idx                    │
+│  - observation()   → Get current state                         │
+│  - close()         → Cleanup resources                         │
+└──────────────┬──────────────────────────────┬───────────────────┘
+               │                              │
+               │ Uses                         │ Uses
+               ▼                              ▼
+┌──────────────────────────┐   ┌─────────────────────────────────┐
+│  SimulatedMilvusCollections│  │     MCPResources               │
+│  (mcp_resources.py)        │  │     (mcp_resources.py)         │
+│  - list_collections()     │  │  - Schemas                      │
+│  - get_collection_info()  │  │  - Prompts                      │
+│  - query_collection()     │  │  - Formatters                   │
+│  - search_collection()    │  │                                 │
+└───────────────────────────┘  └─────────────────────────────────┘
+```
+
+### Component Details
+
+#### 1. MCPEnv (Core Environment)
+- **Location**: `agentenv_mcp/mcp_environment.py`
+- **Purpose**: Core environment logic
+- Tool execution, action parsing, reward calculation
+- Inherits gymnasium.Env
+
+#### 2. MCPEnvServer (Server Manager)
+- **Location**: `agentenv_mcp/mcp_server_wrapper.py`
+- **Purpose**: Multi-instance environment management
+- Thread-safe ID allocation and lifecycle management
+
+#### 3. FastAPI Server
+- **Location**: `agentenv_mcp/mcp_server.py`
+- **Purpose**: HTTP API layer
+- RESTful endpoints with Pydantic validation
+
+#### 4. MCPEnvClient
+- **Location**: `agentenv/agentenv/envs/mcp.py`
+- **Purpose**: Client-side interface
+- HTTP communication, state caching, AgentGym integration
+
+### Tool Integration Pattern
+
+```python
+# Tools registry in MCPEnv
+self.tools = {
+    "list_collections": self._tool_list_collections,
+    "query_collection": self._tool_query_collection,
+    # ...
+}
+
+# Execution in step()
+tool_name, params = self._parse_action(action)  # Parse ReAct format
+result = self.tools[tool_name](**params)         # Execute tool
+return observation, reward, done, info
+```
+
+### Extension Points
+
+**Adding New Tools:**
+```python
+def _tool_my_new_tool(self, param1: str, **kwargs) -> str:
+    """Tool description."""
+    return result
+
+self.tools["my_new_tool"] = self._tool_my_new_tool
+```
+
+**Adding New Collections:**
+```python
+self.collections["new_collection"] = {
+    "schema": {...},
+    "data": [...],
+    "count": len(data)
+}
 ```
 
 ## Contributing
