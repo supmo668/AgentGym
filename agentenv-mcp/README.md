@@ -49,7 +49,32 @@ Currently no API keys required (simulated data only).
 
 ## Usage
 
-### Python Client
+### Simplified Client (Recommended)
+
+```python
+from agentenv_mcp.utils import SimpleMCPClient
+
+# Context manager - auto cleanup
+with SimpleMCPClient() as client:
+    result = client.act("list_collections")
+    print(result["observation"])
+    
+    result = client.act("search_collection", 
+                       collection_name="documents", 
+                       query="machine learning")
+    print(result["observation"])
+```
+
+### One-Liners
+
+```python
+from agentenv_mcp.utils import list_collections, search_collection
+
+print(list_collections())
+print(search_collection("documents", "ML", top_k=3))
+```
+
+### AgentGym Native
 
 ```python
 from agentenv.envs.mcp import MCPEnvClient
@@ -117,6 +142,14 @@ self.collections["new"] = {"schema": {...}, "data": [...]}
 ## Examples
 
 See `example_usage.py` for complete demos.
+
+## Integrations
+
+See [INTEGRATIONS.md](./INTEGRATIONS.md) for:
+- LangChain MCP Adapter usage
+- Direct HTTP integration
+- MCP protocol-compatible clients
+- Additional simplified patterns
 
 ## Contributing
 
