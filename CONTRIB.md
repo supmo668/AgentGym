@@ -46,6 +46,7 @@ Before you begin, ensure you have the following installed on your system:
 ### 1. Clone the Repository
 
 ```bash
+# Clone the repository (use --recursive to initialize submodules)
 git clone --recursive https://github.com/WooooDyy/AgentGym.git
 cd AgentGym
 ```
@@ -603,7 +604,7 @@ myenv = "agentenv_myenv.launch:main"
    )
    ```
 
-For more details, see the [2nd Development Tutorial](docs/tutorials/en/05-2nd-Development.md).
+For more details, see the [Custom Environment Development Tutorial](docs/tutorials/en/05-2nd-Development.md).
 
 ## Running Tests and Evaluations
 
@@ -865,8 +866,13 @@ from agentenv.controller import Evaluator
 **Symptoms**: Java-related errors when starting WebShop
 
 **Solutions**:
-- Install Java 11+: `sudo apt-get install openjdk-11-jdk`
-- Set JAVA_HOME: `export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64`
+- Install Java 11+:
+  - Ubuntu/Debian: `sudo apt-get install openjdk-11-jdk`
+  - macOS: `brew install openjdk@11`
+- Set JAVA_HOME:
+  - Ubuntu/Debian: `export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64`
+  - macOS: `export JAVA_HOME=/usr/local/opt/openjdk@11`
+  - Or find your Java installation: `which java` or `java -XshowSettings:properties -version 2>&1 | grep java.home`
 - Verify Java version: `java -version`
 
 ### Getting Debug Information
@@ -914,7 +920,7 @@ If you experience slow performance:
 
 ### Resources
 
-- **Documentation**: [GitHub Wiki](https://github.com/WooooDyy/AgentGym)
+- **Documentation**: [GitHub Repository](https://github.com/WooooDyy/AgentGym)
 - **Tutorials**: [docs/tutorials/](docs/tutorials/en/)
 - **Examples**: [agentenv/examples/](agentenv/examples/)
 - **Paper**: [AgentGym on arXiv](https://arxiv.org/abs/2406.04151)
