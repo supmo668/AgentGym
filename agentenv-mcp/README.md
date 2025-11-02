@@ -1,588 +1,127 @@
-# MCP Environment - Model Context Protocol Server Simulation
+# MCP Environment
 
-This environment provides a simulated Model Context Protocol (MCP) server with tools for interacting with Milvus vector database collections. It demonstrates how to integrate complex tool-based environments into AgentGym.
+Simulated Model Context Protocol server with Milvus vector collections for AgentGym.
 
-## Overview
-
-The MCP environment simulates a server that provides:
-
-1. **Milvus Collections**: Simulated vector database collections with embeddings
-2. **Collection Tools**: Tools to list, query, and search collections
-3. **Resources**: Schemas, prompt templates, and response formatters
-4. **Integration**: Tools exposed as environment actions for agent interaction
-
-## Features
-
-### Simulated Milvus Collections
-
-The environment includes three pre-populated collections:
-
-1. **documents** - Document embeddings (768-dimensional vectors)
-   - Contains articles about ML, deep learning, and NLP
-   - Fields: id, title, content, embedding, timestamp
-
-2. **users** - User profile embeddings (512-dimensional vectors)
-   - Contains user profiles with embeddings
-   - Fields: id, username, profile_embedding, created_at
-
-3. **products** - Product catalog embeddings (384-dimensional vectors)
-   - Contains product information
-   - Fields: id, name, category, description_embedding, price
-
-### Available Tools
-
-The environment provides the following tools as actions:
-
-1. **list_collections** - Get all available collection names
-2. **get_collection_info** - Get detailed schema and metadata for a collection
-3. **query_collection** - Query a collection and retrieve records
-4. **search_collection** - Perform vector similarity search
-5. **get_schema** - Access resource schema definitions
-6. **get_prompt** - Retrieve and format prompt templates
-7. **format_response** - Format data using JSON, text, or markdown formatters
-8. **finish** - Complete task with final answer
-
-### Resources
-
-The environment includes:
-
-- **Schemas**: JSON schemas for tools and responses
-- **Prompt Templates**: Pre-defined prompts for search, query, and vector search
-- **Formatters**: JSON, text, and markdown table formatters
-
-## Setup
-
-### Installation
+## Quick Start
 
 ```bash
-cd agentenv-mcp
-pip install -e .
+# Install
+cd agentenv-mcp && pip install -e .
+
+# Start
+mcp --host 127.0.0.1 --port 8000
+
+# Test
+curl http://localhost:8000/health
 ```
 
-Or install dependencies directly:
+## Configuration
 
-```bash
-pip install -r requirements.txt
-```
+### For Agent Environment (mcp.json)
 
-### Dependencies
-
-- fastapi >= 0.104.0
-- uvicorn >= 0.24.0
-- pydantic >= 2.0.0
-- click >= 8.1.0
-- gymnasium >= 0.29.0
-- requests >= 2.31.0
-
-## Usage
-
-### Starting the Server
-
-Launch the MCP environment server:
-
-```bash
-# Using installed script
-mcp --host 0.0.0.0 --port 8000
-
-# Or directly with Python
-python -m agentenv_mcp.mcp_launch --host 0.0.0.0 --port 8000
-
-# With auto-reload for development
-mcp --host 127.0.0.1 --port 8000 --reload
-```
-
-The server will start on the specified host and port. You can verify it's running by visiting:
-- `http://localhost:8000/` - Basic connectivity check
-- `http://localhost:8000/health` - Health status endpoint
-- `http://localhost:8000/docs` - Interactive API documentation (Swagger UI)
-
-### MCP Protocol Support
-
-The server supports both REST and SSE (Server-Sent Events) transports as per the Model Context Protocol specification.
-
-#### Using with mcp.json
-
-Configure the MCP server in your `mcp.json`:
+Create `mcp.json` in your agent project:
 
 ```json
 {
   "mcpServers": {
     "agentgym-mcp": {
       "command": "python",
-      "args": [
-        "-m",
-        "agentenv_mcp.mcp_launch",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "8000"
-      ],
-      "env": {},
+      "args": ["-m", "agentenv_mcp.mcp_launch"],
       "transport": "sse"
     }
   }
 }
 ```
 
-#### SSE Endpoints
+**Options:**
+- Add `"--host", "HOST"` to args (default: 127.0.0.1)
+- Add `"--port", "PORT"` to args (default: 8000)
+- Set `transport` to `"sse"` or `"rest"`
 
-- `GET /sse` - Server-Sent Events endpoint for real-time streaming
-- `POST /sse/message` - Send JSON-RPC messages via SSE transport
+### Environment Variables
 
-Example SSE message:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "create",
-  "params": {"id": 0}
-}
+Optional. Copy if needed:
+```bash
+cp .env.example .env
 ```
 
-### Using with AgentGym
+Currently no API keys required (simulated data only).
 
-#### Client Setup
+## Usage
+
+### Python Client
 
 ```python
-from agentenv.envs.mcp import MCPEnvClient, MCPTask
+from agentenv.envs.mcp import MCPEnvClient
 
-# Create client
-client = MCPEnvClient(
-    env_server_base="http://127.0.0.1:8000",
-    data_len=10,  # Number of tasks
-    timeout=300
-)
-
-# Reset to start a task
-response = client.reset(data_idx=0)
-print(response["observation"])
-
-# Execute actions
-action = """Thought: I need to see what collections are available.
-
-Action: list_collections with Action Input: {}"""
-
-result = client.step(action)
-print(result.state)
-print(f"Reward: {result.reward}, Done: {result.done}")
-
-# Close when done
+client = MCPEnvClient(env_server_base="http://127.0.0.1:8000", data_len=10)
+client.reset(data_idx=0)
+result = client.step("Action: list_collections with Action Input: {}")
 client.close()
 ```
 
-#### Task Configuration
+### Available Tools
 
-```python
-from agentenv.envs.mcp import MCPTask
+| Tool | Description |
+|------|-------------|
+| `list_collections` | List all collections |
+| `get_collection_info` | Get collection schema |
+| `query_collection` | Query records |
+| `search_collection` | Vector similarity search |
+| `get_schema` | Get resource schema |
+| `get_prompt` | Get prompt template |
+| `format_response` | Format output (JSON/text/markdown) |
+| `finish` | Complete task |
 
-# Configure task
-task = MCPTask(
-    client_args={
-        "env_server_base": "http://127.0.0.1:8000",
-        "data_len": 10,
-        "timeout": 300
-    },
-    n_clients=1
-)
-```
+## Collections
 
-### Example Interaction
-
-```python
-# Step 1: List collections
-action1 = "Action: list_collections with Action Input: {}"
-# Response: "Available collections: documents, users, products"
-
-# Step 2: Get collection info
-action2 = 'Action: get_collection_info with Action Input: {"collection_name": "documents"}'
-# Response: Detailed schema with fields and types
-
-# Step 3: Query collection
-action3 = '''Action: query_collection with Action Input: {
-    "collection_name": "documents",
-    "limit": 3
-}'''
-# Response: First 3 documents from the collection
-
-# Step 4: Search collection
-action4 = '''Action: search_collection with Action Input: {
-    "collection_name": "documents",
-    "query": "machine learning",
-    "top_k": 5
-}'''
-# Response: Top 5 most similar documents
-
-# Step 5: Finish task
-action5 = '''Action: finish with Action Input: {
-    "answer": "Found 3 documents about ML topics"
-}'''
-# Response: Task completed
-```
+- **documents** (768-dim): ML articles
+- **users** (512-dim): User profiles
+- **products** (384-dim): Product catalog
 
 ## API Endpoints
 
-### Server Endpoints
-
-- `GET /` - Connectivity check
-- `GET /health` - Health status
-- `GET /list_envs` - List active environments
-- `POST /create` - Create new environment
-- `POST /step` - Execute action
-- `POST /reset` - Reset environment
-- `GET /observation` - Get current observation
-- `POST /close` - Close environment
-
-### Request/Response Format
-
-#### Create Environment
-```json
-POST /create
-Body: {"id": 0}  // Optional task ID
-Response: 123  // Environment ID
-```
-
-#### Step
-```json
-POST /step
-Body: {
-    "env_idx": 123,
-    "action": "Action: list_collections with Action Input: {}"
-}
-Response: {
-    "observation": "Available collections: ...",
-    "reward": 0.1,
-    "done": false
-}
-```
-
-#### Reset
-```json
-POST /reset
-Body: {
-    "env_idx": 123,
-    "id": 0  // Task index
-}
-Response: "New MCP task started..."
-```
-
-## Task Dataset
-
-The environment includes 10 pre-defined tasks:
-
-1. List all collections and get info about 'documents'
-2. Search 'documents' collection for 'machine learning'
-3. Query 'users' collection for all profiles
-4. Get 'tool_schema' and format as JSON
-5. Search 'products' for electronics
-6. Summarize all collection purposes
-7. Find top 3 documents similar to 'deep learning'
-8. Get 'users' info and query with limit 5
-9. Use search_prompt template for products
-10. Demonstrate using 3+ different tools
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/health` | Server status |
+| GET | `/sse` | SSE streaming |
+| POST | `/sse/message` | JSON-RPC messages |
+| POST | `/create` | Create environment |
+| POST | `/step` | Execute action |
+| POST | `/reset` | Reset environment |
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                 Agent (LLM)                         │
-└────────────────────┬────────────────────────────────┘
-                     │ HTTP
-                     ▼
-┌─────────────────────────────────────────────────────┐
-│           MCPEnvClient (agentenv/envs/mcp.py)       │
-│  - Parses LLM output                                │
-│  - Makes HTTP requests                              │
-│  - Manages local state                              │
-└────────────────────┬────────────────────────────────┘
-                     │ HTTP (FastAPI)
-                     ▼
-┌─────────────────────────────────────────────────────┐
-│      MCP Server (agentenv_mcp/mcp_server.py)        │
-│  - FastAPI endpoints                                │
-│  - Request validation                               │
-└────────────────────┬────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────┐
-│    MCPEnvServer (mcp_server_wrapper.py)             │
-│  - Manages environment instances                    │
-│  - Thread-safe operations                           │
-│  - Task dataset                                     │
-└────────────────────┬────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────┐
-│         MCPEnv (mcp_environment.py)                 │
-│  - Core environment logic                           │
-│  - Tool execution                                   │
-│  - Action parsing                                   │
-│  - Reward calculation                               │
-└────────────────────┬────────────────────────────────┘
-                     │
-         ┌───────────┴───────────┐
-         ▼                       ▼
-┌──────────────────┐  ┌──────────────────────┐
-│ Simulated Milvus │  │   MCP Resources      │
-│   Collections    │  │  - Schemas           │
-│  - documents     │  │  - Prompts           │
-│  - users         │  │  - Formatters        │
-│  - products      │  │                      │
-└──────────────────┘  └──────────────────────┘
+LLM Agent → MCPEnvClient → FastAPI Server → MCPEnv → [Collections, Resources]
 ```
 
-## Development
+**Components:**
+- `mcp_environment.py` - Core environment (gymnasium.Env)
+- `mcp_server.py` - FastAPI server (REST + SSE)
+- `mcp_server_wrapper.py` - Multi-instance manager
+- `mcp_resources.py` - Simulated collections + resources
 
-### Running Tests
-
-```bash
-# Install test dependencies
-pip install pytest pytest-cov
-
-# Run tests
-pytest agentenv-mcp/tests/
-
-# Run with coverage
-pytest --cov=agentenv_mcp agentenv-mcp/tests/
-```
-
-### Code Structure
-
-```
-agentenv-mcp/
-├── agentenv_mcp/
-│   ├── __init__.py              # Package initialization
-│   ├── mcp_environment.py       # Core environment logic
-│   ├── mcp_server_wrapper.py   # Server-side manager
-│   ├── mcp_server.py            # FastAPI server
-│   ├── mcp_launch.py            # Launch script
-│   ├── mcp_model.py             # Pydantic models
-│   └── mcp_resources.py         # Simulated data and resources
-├── pyproject.toml               # Package configuration
-├── requirements.txt             # Dependencies
-└── README.md                    # This file
-```
-
-### Adding New Collections
-
-To add a new simulated collection, edit `mcp_resources.py`:
-
+**Extending:**
 ```python
-self.collections["my_collection"] = {
-    "schema": {
-        "name": "my_collection",
-        "description": "Description",
-        "fields": [
-            {"name": "id", "type": "INT64", "is_primary": True},
-            # ... more fields
-        ]
-    },
-    "data": [
-        # ... your data
-    ],
-    "count": len(data)
-}
-```
-
-### Adding New Tools
-
-To add a new tool, add a method to `MCPEnv` in `mcp_environment.py`:
-
-```python
-def _tool_my_tool(self, param1: str, **kwargs) -> str:
-    """Tool description."""
-    # Implementation
+# Add tool
+def _tool_my_tool(self, param: str, **kwargs) -> str:
     return result
 
-# Register in __init__
 self.tools["my_tool"] = self._tool_my_tool
+
+# Add collection
+self.collections["new"] = {"schema": {...}, "data": [...]}
 ```
 
-## Integration as Environment Actions
+## Examples
 
-The MCP environment demonstrates key concepts for tool integration:
-
-1. **Tool Definition**: Each tool is a method in the environment
-2. **Action Parsing**: Actions are parsed from LLM output (ReAct format)
-3. **Parameter Extraction**: JSON parameters are extracted and validated
-4. **Execution**: Tools are executed with parsed parameters
-5. **Response Formatting**: Results are formatted as observations
-6. **Reward Signaling**: Successful actions receive rewards
-
-This pattern can be extended to integrate any set of tools or APIs as environment actions.
-
-## Example Use Cases
-
-### 1. Information Retrieval
-```
-Goal: Find all documents about machine learning
-Tools: list_collections → get_collection_info → search_collection → finish
-```
-
-### 2. Data Exploration
-```
-Goal: Explore available collections and their schemas
-Tools: list_collections → get_collection_info (multiple) → finish
-```
-
-### 3. Semantic Search
-```
-Goal: Find similar products to a query
-Tools: get_collection_info → search_collection → format_response → finish
-```
-
-### 4. Prompt Engineering
-```
-Goal: Use a prompt template for a task
-Tools: get_prompt → search_collection → finish
-```
-
-## Architecture
-
-### Overview
-
-The MCP environment demonstrates how to integrate complex tool-based systems into AgentGym. It simulates a Model Context Protocol server with Milvus vector database collections.
-
-### Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         LLM Agent                               │
-│  - Generates thoughts and actions                               │
-│  - Uses ReAct format                                            │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ Natural Language Actions
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              MCPEnvClient (agentenv/envs/mcp.py)                │
-│  - Manages HTTP communication with server                       │
-│  - Maintains conversation history                               │
-│  - Caches state locally                                         │
-│  - Implements BaseEnvClient interface                           │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ HTTP POST/GET
-                         │ JSON payloads
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│           FastAPI Server (mcp_server.py)                        │
-│  Endpoints:                                                     │
-│  - POST /create      → Create environment                       │
-│  - POST /step        → Execute action                           │
-│  - POST /reset       → Reset to initial state                   │
-│  - GET  /observation → Get current state                        │
-│  - POST /close       → Cleanup environment                      │
-│  - GET  /health      → Server health check                      │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ Validated Requests
-                         │ (Pydantic models)
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│         MCPEnvServer (mcp_server_wrapper.py)                    │
-│  - Manages multiple environment instances                       │
-│  - Thread-safe ID allocation                                    │
-│  - Environment lifecycle management                             │
-│  - Task dataset management                                      │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ Method Calls
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              MCPEnv (mcp_environment.py)                        │
-│  Core Environment (inherits gym.Env)                            │
-│  - step(action)    → Execute action and return obs/reward/done │
-│  - reset(idx)      → Initialize to task idx                    │
-│  - observation()   → Get current state                         │
-│  - close()         → Cleanup resources                         │
-└──────────────┬──────────────────────────────┬───────────────────┘
-               │                              │
-               │ Uses                         │ Uses
-               ▼                              ▼
-┌──────────────────────────┐   ┌─────────────────────────────────┐
-│  SimulatedMilvusCollections│  │     MCPResources               │
-│  (mcp_resources.py)        │  │     (mcp_resources.py)         │
-│  - list_collections()     │  │  - Schemas                      │
-│  - get_collection_info()  │  │  - Prompts                      │
-│  - query_collection()     │  │  - Formatters                   │
-│  - search_collection()    │  │                                 │
-└───────────────────────────┘  └─────────────────────────────────┘
-```
-
-### Component Details
-
-#### 1. MCPEnv (Core Environment)
-- **Location**: `agentenv_mcp/mcp_environment.py`
-- **Purpose**: Core environment logic
-- Tool execution, action parsing, reward calculation
-- Inherits gymnasium.Env
-
-#### 2. MCPEnvServer (Server Manager)
-- **Location**: `agentenv_mcp/mcp_server_wrapper.py`
-- **Purpose**: Multi-instance environment management
-- Thread-safe ID allocation and lifecycle management
-
-#### 3. FastAPI Server
-- **Location**: `agentenv_mcp/mcp_server.py`
-- **Purpose**: HTTP API layer
-- RESTful endpoints with Pydantic validation
-
-#### 4. MCPEnvClient
-- **Location**: `agentenv/agentenv/envs/mcp.py`
-- **Purpose**: Client-side interface
-- HTTP communication, state caching, AgentGym integration
-
-### Tool Integration Pattern
-
-```python
-# Tools registry in MCPEnv
-self.tools = {
-    "list_collections": self._tool_list_collections,
-    "query_collection": self._tool_query_collection,
-    # ...
-}
-
-# Execution in step()
-tool_name, params = self._parse_action(action)  # Parse ReAct format
-result = self.tools[tool_name](**params)         # Execute tool
-return observation, reward, done, info
-```
-
-### Extension Points
-
-**Adding New Tools:**
-```python
-def _tool_my_new_tool(self, param1: str, **kwargs) -> str:
-    """Tool description."""
-    return result
-
-self.tools["my_new_tool"] = self._tool_my_new_tool
-```
-
-**Adding New Collections:**
-```python
-self.collections["new_collection"] = {
-    "schema": {...},
-    "data": [...],
-    "count": len(data)
-}
-```
+See `example_usage.py` for complete demos.
 
 ## Contributing
 
-See [CONTRIB.md](../CONTRIB.md) for general contribution guidelines.
-
-For MCP-specific contributions:
-1. Keep simulated data realistic but lightweight
-2. Ensure all tools have clear docstrings
-3. Add tests for new tools or collections
-4. Update this README with new features
+See [CONTRIB.md](../CONTRIB.md) for guidelines.
 
 ## License
 
-MIT License - See [LICENSE](../LICENSE) for details.
-
-## References
-
-- [AgentGym Paper](https://arxiv.org/abs/2406.04151)
-- [Milvus Vector Database](https://milvus.io/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+MIT - See [LICENSE](../LICENSE)
