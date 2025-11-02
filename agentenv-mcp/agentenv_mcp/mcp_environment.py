@@ -2,7 +2,7 @@
 MCP Environment - Core environment logic for MCP server simulation.
 """
 
-import gym
+import gymnasium as gym
 from typing import Any, Dict, Tuple, List, Optional
 import json
 import re
