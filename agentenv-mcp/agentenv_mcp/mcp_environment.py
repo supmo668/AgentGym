@@ -1,19 +1,20 @@
 """
-MCP Environment - Core environment logic for MCP server simulation.
+MCP Environment - Core environment logic for MCP server.
 """
 
 import gymnasium as gym
 from typing import Any, Dict, Tuple, List, Optional
 import json
 import re
-from .mcp_resources import SimulatedMilvusCollections, MCPResources
+import os
+from .mcp_resources import MilvusConnection, MCPResources
 
 
 class MCPEnv(gym.Env[str, str]):
     """
-    Model Context Protocol environment with simulated Milvus collections.
+    Model Context Protocol environment with Milvus collections.
     
-    This environment provides tools for:
+    Provides tools for:
     - Listing and querying Milvus collections
     - Vector similarity search
     - Accessing collection schemas
@@ -29,8 +30,13 @@ class MCPEnv(gym.Env[str, str]):
         """
         super().__init__()
         
-        # Initialize resources
-        self.milvus = SimulatedMilvusCollections()
+        # Initialize Milvus connection from environment variables
+        self.milvus = MilvusConnection(
+            host=os.getenv("MILVUS_HOST", "localhost"),
+            port=int(os.getenv("MILVUS_PORT", "19530")),
+            user=os.getenv("MILVUS_USER", ""),
+            password=os.getenv("MILVUS_PASSWORD", "")
+        )
         self.resources = MCPResources()
         
         # Environment state

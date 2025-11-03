@@ -1,18 +1,160 @@
 """
-Simulated Milvus collections and MCP resources.
+MCP resources - schemas, prompts, and formatters.
 
-This module provides simulated data for:
-- Milvus vector database collections
+This module provides:
 - Collection schemas
-- Prompt templates
-- Prompt formatters
+- Prompt templates (loaded from prompts.yaml)
+- Response formatters
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import json
+import yaml
+from pathlib import Path
 
 
-class SimulatedMilvusCollections:
+def load_prompts() -> Dict[str, str]:
+    """Load prompts from YAML file."""
+    prompts_file = Path(__file__).parent.parent / "prompts.yaml"
+    if prompts_file.exists():
+        with open(prompts_file) as f:
+            return yaml.safe_load(f)
+    return {}
+
+
+class MilvusConnection:
+    """Milvus database connection handler."""
+    
+    def __init__(self, host: str = "localhost", port: int = 19530, 
+                 user: str = "", password: str = ""):
+        """Initialize Milvus connection parameters."""
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self._connected = False
+    
+    def connect(self):
+        """Connect to Milvus (placeholder for actual connection)."""
+        # Actual Milvus connection would go here
+        # from pymilvus import connections
+        # connections.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+        self._connected = True
+    
+    def list_collections(self) -> List[str]:
+        """List all collections in Milvus."""
+        if not self._connected:
+            self.connect()
+        # Actual implementation: from pymilvus import utility
+        # return utility.list_collections()
+        return []
+    
+    def get_collection_info(self, collection_name: str) -> Dict[str, Any]:
+        """Get collection schema and info."""
+        if not self._connected:
+            self.connect()
+        # Actual implementation: from pymilvus import Collection
+        # collection = Collection(collection_name)
+        # return {"schema": collection.schema, "count": collection.num_entities}
+        return {"error": "Not connected to Milvus"}
+    
+    def query_collection(self, collection_name: str, limit: int = 10, 
+                        filter_expr: Optional[str] = None) -> Dict[str, Any]:
+        """Query a collection."""
+        if not self._connected:
+            self.connect()
+        # Actual implementation with pymilvus
+        return {"results": [], "count": 0}
+    
+    def search_collection(self, collection_name: str, query_vector: List[float], 
+                         top_k: int = 5) -> Dict[str, Any]:
+        """Perform vector similarity search."""
+        if not self._connected:
+            self.connect()
+        # Actual implementation with pymilvus
+        return {"results": [], "count": 0}
+
+
+class MCPResources:
+    """MCP resources including schemas, prompts, and formatters."""
+    
+    def __init__(self):
+        """Initialize MCP resources."""
+        self.schemas = self._init_schemas()
+        self.prompts = load_prompts()
+        self.formatters = self._init_formatters()
+    
+    def _init_schemas(self) -> Dict[str, Dict[str, Any]]:
+        """Initialize resource schemas."""
+        return {
+            "tool_schema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "parameters": {"type": "object", "properties": {}}
+                }
+            },
+            "response_schema": {
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"},
+                    "data": {"type": "object"},
+                    "error": {"type": "string"}
+                }
+            }
+        }
+    
+    def _init_formatters(self) -> Dict[str, Any]:
+        """Initialize response formatters."""
+        return {
+            "json_formatter": {
+                "name": "JSON Response Formatter",
+                "format": lambda data: json.dumps(data, indent=2)
+            },
+            "text_formatter": {
+                "name": "Text Response Formatter",
+                "format": lambda data: str(data)
+            },
+            "markdown_formatter": {
+                "name": "Markdown Table Formatter",
+                "format": self._format_as_markdown
+            }
+        }
+    
+    def _format_as_markdown(self, data: Any) -> str:
+        """Format data as markdown table."""
+        if isinstance(data, list) and len(data) > 0:
+            if isinstance(data[0], dict):
+                keys = list(data[0].keys())
+                header = "| " + " | ".join(keys) + " |"
+                separator = "| " + " | ".join(["---"] * len(keys)) + " |"
+                rows = []
+                for item in data:
+                    row = "| " + " | ".join(str(item.get(k, "")) for k in keys) + " |"
+                    rows.append(row)
+                return "\n".join([header, separator] + rows)
+        return str(data)
+    
+    def get_schema(self, schema_name: str) -> Dict[str, Any]:
+        """Get a specific schema."""
+        return self.schemas.get(schema_name, {})
+    
+    def get_prompt(self, prompt_name: str, **kwargs) -> str:
+        """Get and format a prompt template."""
+        template = self.prompts.get(prompt_name, "")
+        try:
+            return template.format(**kwargs)
+        except KeyError:
+            return template
+    
+    def format_response(self, data: Any, formatter: str = "json") -> str:
+        """Format response using specified formatter."""
+        formatter_name = f"{formatter}_formatter"
+        if formatter_name in self.formatters:
+            return self.formatters[formatter_name]["format"](data)
+        return str(data)
+
     """Simulated Milvus collections with vector data."""
     
     def __init__(self):

@@ -1,6 +1,6 @@
 # MCP Environment
 
-Simulated Model Context Protocol server with Milvus vector collections for AgentGym.
+Model Context Protocol server with Milvus vector database for AgentGym.
 
 ## Quick Start
 
@@ -8,18 +8,26 @@ Simulated Model Context Protocol server with Milvus vector collections for Agent
 # Install
 cd agentenv-mcp && pip install -e .
 
+# Configure
+cp .env.example .env
+# Edit .env with your Milvus connection details
+
 # Start
 mcp --host 127.0.0.1 --port 8000
-
-# Test
-curl http://localhost:8000/health
 ```
 
 ## Configuration
 
-### For Agent Environment (mcp.json)
+### Milvus Connection (.env)
 
-Create `mcp.json` in your agent project:
+```bash
+MILVUS_HOST=localhost
+MILVUS_PORT=19530
+MILVUS_USER=
+MILVUS_PASSWORD=
+```
+
+### Agent Environment (mcp.json)
 
 ```json
 {
@@ -34,18 +42,9 @@ Create `mcp.json` in your agent project:
 ```
 
 **Options:**
-- Add `"--host", "HOST"` to args (default: 127.0.0.1)
-- Add `"--port", "PORT"` to args (default: 8000)
+- Add `"--host", "HOST"` to args
+- Add `"--port", "PORT"` to args
 - Set `transport` to `"sse"` or `"rest"`
-
-### Environment Variables
-
-Optional. Copy if needed:
-```bash
-cp .env.example .env
-```
-
-Currently no API keys required (simulated data only).
 
 ## Usage
 
@@ -98,12 +97,6 @@ client.close()
 | `format_response` | Format output (JSON/text/markdown) |
 | `finish` | Complete task |
 
-## Collections
-
-- **documents** (768-dim): ML articles
-- **users** (512-dim): User profiles
-- **products** (384-dim): Product catalog
-
 ## API Endpoints
 
 | Method | Endpoint | Purpose |
@@ -118,26 +111,14 @@ client.close()
 ## Architecture
 
 ```
-LLM Agent → MCPEnvClient → FastAPI Server → MCPEnv → [Collections, Resources]
+LLM Agent → MCPEnvClient → FastAPI Server → MCPEnv → Milvus DB
 ```
 
 **Components:**
-- `mcp_environment.py` - Core environment (gymnasium.Env)
+- `mcp_environment.py` - Core environment
 - `mcp_server.py` - FastAPI server (REST + SSE)
-- `mcp_server_wrapper.py` - Multi-instance manager
-- `mcp_resources.py` - Simulated collections + resources
-
-**Extending:**
-```python
-# Add tool
-def _tool_my_tool(self, param: str, **kwargs) -> str:
-    return result
-
-self.tools["my_tool"] = self._tool_my_tool
-
-# Add collection
-self.collections["new"] = {"schema": {...}, "data": [...]}
-```
+- `mcp_resources.py` - Milvus connection + resources
+- `prompts.yaml` - Prompt templates
 
 ## Examples
 

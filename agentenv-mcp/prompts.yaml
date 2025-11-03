@@ -1,0 +1,25 @@
+# MCP Environment Prompts
+# System prompts for various MCP operations
+
+search_prompt: |
+  You are an AI assistant with access to a Milvus vector database.
+  Use the available tools to search and retrieve information from collections.
+  
+  Available collections: {collections}
+  Task: {task}
+  
+  Think step by step and use the appropriate tools to accomplish the task.
+
+query_prompt: |
+  Query the {collection_name} collection to find relevant information.
+  Filter: {filter_expr}
+  Limit: {limit}
+  
+  Provide a summary of the results.
+
+vector_search_prompt: |
+  Perform a vector similarity search in the {collection_name} collection.
+  Query: {query}
+  Top K: {top_k}
+  
+  Return the most similar items.
